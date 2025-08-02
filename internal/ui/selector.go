@@ -77,7 +77,7 @@ func NewSelector[T Selectable](loader DataLoader[T], config SelectorConfig) *sel
 		config.Width = 80
 	}
 	if config.Height == 0 {
-		config.Height = 14
+		config.Height = 28 
 	}
 
 	return &selectorModel[T]{
