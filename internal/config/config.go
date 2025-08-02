@@ -4,16 +4,21 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	APIURL  string `mapstructure:"api_url"`
-	APIKey  string `mapstructure:"api_key"`
-	Timeout int    `mapstructure:"timeout"`
+	Token  string `mapstructure:"token"`
+	AccountId  string `mapstructure:"account_id"`
 }
 
 func Load() (*Config, error) {
+
+	if err := godotenv.Load(); err != nil {
+		godotenv.Load(".env.local")
+	}
+
 	viper.SetConfigName("harvest-cli")
 	viper.SetConfigType("yaml")
 
@@ -21,12 +26,8 @@ func Load() (*Config, error) {
 	viper.AddConfigPath(filepath.Join(home, ".config", "harvest-cli"))
 	viper.AddConfigPath(".")
 
-	// Environment variables
-	viper.SetEnvPrefix("HARVESTCLI")
-	viper.AutomaticEnv()
-
-	// Defaults
-	viper.SetDefault("timeout", 30)
+	viper.BindEnv("token", "HARVEST_TOKEN")
+	viper.BindEnv("account_id", "HARVEST_ACCOUNT_ID")
 
 	var config Config
 	if err := viper.ReadInConfig(); err != nil {

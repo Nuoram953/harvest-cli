@@ -11,8 +11,8 @@ import (
 
 // Global flags shared across commands
 var (
-	apiURL       string
-	apiKey       string
+	token       string
+	accountId       string
 	timeout      int
 	verbose      bool
 	outputFormat string
@@ -23,8 +23,6 @@ var (
 )
 
 func addGlobalFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVar(&apiURL, "api-url", "", "API base URL")
-	cmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API key")
 	cmd.PersistentFlags().IntVar(&timeout, "timeout", 30, "Request timeout")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 }
@@ -46,23 +44,7 @@ func createAPIClient() (*api.Client, error) {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Override config with flags if provided
-	url := cfg.APIURL
-	if apiURL != "" {
-		url = apiURL
-	}
-
-	key := cfg.APIKey
-	if apiKey != "" {
-		key = apiKey
-	}
-
-	timeoutVal := cfg.Timeout
-	if timeout != 30 {
-		timeoutVal = timeout
-	}
-
-	return api.NewClient(url, key, timeoutVal)
+	return api.NewClient(cfg.Token, cfg.AccountId)
 }
 
 func buildListParams() api.ListParams {

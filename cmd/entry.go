@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"harvest-cli/internal/api"
+	"harvest-cli/internal/ui"
 )
 
 var entryCmd = &cobra.Command{
@@ -45,7 +46,7 @@ var entryDeleteCmd = &cobra.Command{
 var (
 	entryTitle   string
 	entryContent string
-	entryTags    []string
+	entryTags    string
 	entryStatus  string
 	entryPrivate bool
 )
@@ -58,21 +59,12 @@ func init() {
 
 	addGlobalFlags(entryCmd)
 
-	entryCreateCmd.Flags().StringVarP(&entryTitle, "title", "t", "", "Entry title (required)")
-	entryCreateCmd.Flags().StringVarP(&entryContent, "content", "c", "", "Entry content")
-	entryCreateCmd.Flags().StringSliceVar(&entryTags, "tags", []string{}, "Tags (comma-separated)")
-	entryCreateCmd.Flags().StringVarP(&entryStatus, "status", "s", "draft", "Entry status")
-	entryCreateCmd.Flags().BoolVar(&entryPrivate, "private", false, "Make entry private")
-	entryCreateCmd.MarkFlagRequired("title")
-
-	entryEditCmd.Flags().StringVarP(&entryTitle, "title", "t", "", "New entry title")
-	entryEditCmd.Flags().StringVarP(&entryContent, "content", "c", "", "New entry content")
-	entryEditCmd.Flags().StringSliceVar(&entryTags, "tags", []string{}, "New tags")
-	entryEditCmd.Flags().StringVarP(&entryStatus, "status", "s", "", "New entry status")
-	entryEditCmd.Flags().BoolVar(&entryPrivate, "private", false, "Set entry privacy")
+	entryCreateCmd.Flags().StringVarP(&entryTitle, "project", "p", "", "Entry title (required)")
+	entryCreateCmd.Flags().StringVarP(&entryContent, "task", "t", "", "Entry content")
+	entryCreateCmd.Flags().StringVarP(&entryTags, "date", "d", "", "Tags (comma-separated)")
+	entryCreateCmd.Flags().StringVarP(&entryStatus, "minute", "m", "", "Entry status")
 
 	addViewFlags(entryViewCmd)
-	addDeleteFlags(entryDeleteCmd)
 }
 
 func runEntryCreate(cmd *cobra.Command, args []string) error {
@@ -88,6 +80,10 @@ func runEntryCreate(cmd *cobra.Command, args []string) error {
 		Status:  entryStatus,
 		Private: entryPrivate,
 	}
+
+	selectedEntry, _ := ui.SelectProjectInteractively(client)
+
+	print(selectedEntry)
 
 	result, err := client.CreateEntry(entry)
 	if err != nil {

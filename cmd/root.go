@@ -5,7 +5,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-    Use:   "my-app",
+    Use:   "harvest",
     Short: "API wrapper for managing entries and tasks",
     Long:  `A command-line interface for interacting with the API`,
 }

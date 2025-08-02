@@ -7,24 +7,24 @@ import (
 )
 
 type Client struct {
-	baseURL    string
-	apiKey     string
+	token    string
+	accountId     string
 	httpClient *http.Client
 }
 
-func NewClient(baseURL, apiKey string, timeoutSeconds int) (*Client, error) {
-	if baseURL == "" {
-		return nil, fmt.Errorf("API URL is required")
+func NewClient(token, accountid string) (*Client, error) {
+	if token == "" {
+		return nil, fmt.Errorf("Harvest token is required")
 	}
-	if apiKey == "" {
-		return nil, fmt.Errorf("API key is required")
+	if accountid == "" {
+		return nil, fmt.Errorf("Harvest account id is required")
 	}
 
 	return &Client{
-		baseURL: baseURL,
-		apiKey:  apiKey,
+		token: token,
+		accountId:  accountid,
 		httpClient: &http.Client{
-			Timeout: time.Duration(timeoutSeconds) * time.Second,
+			Timeout: time.Duration(30) * time.Second,
 		},
 	}, nil
 }

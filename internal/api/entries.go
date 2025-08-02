@@ -8,7 +8,7 @@ import (
 
 func (c *Client) CreateEntry(req CreateEntryRequest) (*CreateEntryResponse, error) {
 	var response CreateEntryResponse
-	err := c.makeRequest("POST", "/entries", req, &response)
+	err := c.makeRequest("POST", "/time_entries", req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func (c *Client) CreateEntry(req CreateEntryRequest) (*CreateEntryResponse, erro
 
 func (c *Client) GetEntry(id string) (*Entry, error) {
 	var entry Entry
-	endpoint := fmt.Sprintf("/entries/%s", id)
+	endpoint := fmt.Sprintf("/time_entries/%s", id)
 	err := c.makeRequest("GET", endpoint, nil, &entry)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (c *Client) ListEntries(params ListParams) ([]*Entry, error) {
 
 func (c *Client) UpdateEntry(id string, req UpdateEntryRequest) (*Entry, error) {
 	var entry Entry
-	endpoint := fmt.Sprintf("/entries/%s", id)
+	endpoint := fmt.Sprintf("/time_entries/%s", id)
 	err := c.makeRequest("PUT", endpoint, req, &entry)
 	if err != nil {
 		return nil, err
