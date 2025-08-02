@@ -104,7 +104,7 @@ func (m *selectorModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q", "esc":
+		case "ctrl+c", "q" :
 			m.quitting = true
 			return m, tea.Quit
 		case "enter":
@@ -182,7 +182,6 @@ func (m *selectorModel[T]) View() string {
 	return "\n" + m.list.View() + "\n\nPress Enter to select, q/esc to quit\n"
 }
 
-// RunSelector runs the selector and returns the selected item
 func RunSelector[T Selectable](loader DataLoader[T], config SelectorConfig) (*T, error) {
 	model := NewSelector(loader, config)
 	p := tea.NewProgram(model)
@@ -223,11 +222,15 @@ func (e EntrySelectable) GetDescription() string {
 
 // Task implementation of Selectable interface
 type TaskSelectable struct {
-	*api.Task
+	*api.TaskAssignment
+}
+
+func (t TaskSelectable) GetID() string {
+	return string(t.TaskAssignment.Task.ID)
 }
 
 func (t TaskSelectable) GetTitle() string {
-	return t.Task.Name
+	return t.TaskAssignment.Task.Name
 }
 
 func (t TaskSelectable) GetDescription() string {
@@ -239,11 +242,11 @@ type ProjectSelectable struct {
 }
 
 func (p ProjectSelectable) GetID() string {
-	return p.Project.Name
+	return string(p.ProjectAssignment.Project.ID)
 }
 
 func (p ProjectSelectable) GetTitle() string {
-	return p.Project.Name
+	return p.ProjectAssignment.Project.Name
 }
 
 func (p ProjectSelectable) GetDescription() string {
@@ -274,21 +277,22 @@ func (el *EntryLoader) Load() ([]EntrySelectable, error) {
 type TaskLoader struct {
 	client *api.Client
 	params api.ListParams
+	projectId int64
 }
 
-// func (tl *TaskLoader) Load() ([]TaskSelectable, error) {
-// 	tasks, err := tl.client.ListTasks()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	selectableTasks := make([]TaskSelectable, len(tasks))
-// 	for i, task := range tasks {
-// 		selectableTasks[i] = TaskSelectable{Task: task}
-// 	}
-//
-// 	return selectableTasks, nil
-// }
+func (tl *TaskLoader) Load() ([]TaskSelectable, error) {
+	tasks, err := tl.client.ListTasks(tl.projectId, tl.params)
+	if err != nil {
+		return nil, err
+	}
+
+	selectableTasks := make([]TaskSelectable, len(tasks))
+	for i, task := range tasks {
+		selectableTasks[i] = TaskSelectable{TaskAssignment: task}
+	}
+
+	return selectableTasks, nil
+}
 
 // Project loader implementation
 type ProjectLoader struct {
@@ -343,22 +347,21 @@ func SelectEntryInteractively(client *api.Client) (*api.Entry, error) {
 	return selected.Entry, nil
 }
 
-// // SelectTaskInteractively allows interactive selection of a task
-// func SelectTaskInteractively(client *api.Client) (*api.Task, error) {
-// 	loader := &TaskLoader{client: client}
-// 	config := SelectorConfig{
-// 		Title:      "Select a Task",
-// 		EmptyMsg:   "No tasks found.",
-// 		LoadingMsg: "Loading tasks...",
-// 	}
-//
-// 	selected, err := RunSelector(loader, config)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	return selected.Task, nil
-// }
+func SelectTaskInteractively(client *api.Client, projectId int64) (*api.Task, error) {
+	loader := &TaskLoader{client: client, projectId: projectId}
+	config := SelectorConfig{
+		Title:      "Select a Task",
+		EmptyMsg:   "No tasks found.",
+		LoadingMsg: "Loading tasks...",
+	}
+
+	selected, err := RunSelector(loader, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &selected.Task, nil
+}
 
 func SelectProjectInteractively(client *api.Client) (*api.Project, error) {
 	loader := &ProjectLoader{client: client}

@@ -44,11 +44,10 @@ var entryDeleteCmd = &cobra.Command{
 }
 
 var (
-	entryTitle   string
-	entryContent string
-	entryTags    string
-	entryStatus  string
-	entryPrivate bool
+	entryProjectId int64
+	entryTaskId    int64
+	entryDate      string
+	entryMinutes   int
 )
 
 func init() {
@@ -59,10 +58,10 @@ func init() {
 
 	addGlobalFlags(entryCmd)
 
-	entryCreateCmd.Flags().StringVarP(&entryTitle, "project", "p", "", "Entry title (required)")
-	entryCreateCmd.Flags().StringVarP(&entryContent, "task", "t", "", "Entry content")
-	entryCreateCmd.Flags().StringVarP(&entryTags, "date", "d", "", "Tags (comma-separated)")
-	entryCreateCmd.Flags().StringVarP(&entryStatus, "minute", "m", "", "Entry status")
+	entryCreateCmd.Flags().Int64VarP(&entryProjectId, "project", "p", 0, "Entry title (required)")
+	entryCreateCmd.Flags().Int64VarP(&entryTaskId, "task", "t", 0, "Entry content")
+	entryCreateCmd.Flags().StringVarP(&entryDate, "date", "d", "", "Tags (comma-separated)")
+	entryCreateCmd.Flags().IntVarP(&entryMinutes, "minute", "m", 0, "Entry status")
 
 	addViewFlags(entryViewCmd)
 }
@@ -73,24 +72,35 @@ func runEntryCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	entry := api.CreateEntryRequest{
-		Title:   entryTitle,
-		Content: entryContent,
-		Tags:    entryTags,
-		Status:  entryStatus,
-		Private: entryPrivate,
+	if entryProjectId == 0 {
+		selectedProject, _ := ui.SelectProjectInteractively(client)
+		entryProjectId = selectedProject.ID
 	}
 
-	selectedEntry, _ := ui.SelectProjectInteractively(client)
+	if entryTaskId == 0 {
+		selectedTask, _ := ui.SelectTaskInteractively(client, entryProjectId)
+		entryTaskId = selectedTask.ID
+	}
 
-	print(selectedEntry)
+	if entryDate == "" {
+		date, _ := ui.TextInputDate("Select date for entry")
+		entryDate = date
+	}
 
-	result, err := client.CreateEntry(entry)
+
+	entry := api.CreateEntryRequest{
+		ProjectId: entryProjectId,
+		TaskId:    entryTaskId,
+		Date:      entryDate,
+		Hours:     1,
+	}
+
+	_, err = client.CreateEntry(entry)
 	if err != nil {
 		return fmt.Errorf("failed to create entry: %w", err)
 	}
 
-	fmt.Printf("Entry created successfully!\nID: %s\nTitle: %s\n", result.ID, result.Title)
+	fmt.Printf("Entry created successfully!")
 	return nil
 }
 
@@ -123,20 +133,8 @@ func runEntryEdit(cmd *cobra.Command, args []string) error {
 	}
 
 	updates := api.UpdateEntryRequest{}
-	if cmd.Flags().Changed("title") {
-		updates.Title = &entryTitle
-	}
-	if cmd.Flags().Changed("content") {
-		updates.Content = &entryContent
-	}
 	if cmd.Flags().Changed("tags") {
-		updates.Tags = &entryTags
-	}
-	if cmd.Flags().Changed("status") {
-		updates.Status = &entryStatus
-	}
-	if cmd.Flags().Changed("private") {
-		updates.Private = &entryPrivate
+		updates.Tags = &entryDate
 	}
 
 	result, err := client.UpdateEntry(args[0], updates)
