@@ -2,12 +2,14 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
+
+	"harvest-cli/internal/api"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"harvest-cli/internal/api"
 )
 
 type Selectable interface {
@@ -31,17 +33,17 @@ func (i selectableItem[T]) Description() string { return i.item.GetDescription()
 
 // Generic selector model
 type selectorModel[T Selectable] struct {
-	loading     bool
-	spinner     spinner.Model
-	list        list.Model
-	items       []T
-	selected    *T
-	err         error
-	quitting    bool
-	loader      DataLoader[T]
-	title       string
-	emptyMsg    string
-	loadingMsg  string
+	loading    bool
+	spinner    spinner.Model
+	list       list.Model
+	items      []T
+	selected   *T
+	err        error
+	quitting   bool
+	loader     DataLoader[T]
+	title      string
+	emptyMsg   string
+	loadingMsg string
 }
 
 type itemsLoadedMsg[T Selectable] []T
@@ -104,7 +106,7 @@ func (m *selectorModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q" :
+		case "ctrl+c", "q":
 			m.quitting = true
 			return m, tea.Quit
 		case "enter":
@@ -120,13 +122,13 @@ func (m *selectorModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case itemsLoadedMsg[T]:
 		m.loading = false
 		m.items = []T(msg)
-		
+
 		// Create list items
 		listItems := make([]list.Item, len(m.items))
 		for i, item := range m.items {
 			listItems[i] = selectableItem[T]{item: item}
 		}
-		
+
 		// Setup list
 		l := list.New(listItems, list.NewDefaultDelegate(), 80, 14)
 		l.Title = m.title
@@ -136,7 +138,7 @@ func (m *selectorModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Foreground(lipgloss.Color("62")).
 			Bold(true).
 			Padding(0, 0, 1, 2)
-		
+
 		m.list = l
 		return m, nil
 
@@ -185,12 +187,12 @@ func (m *selectorModel[T]) View() string {
 func RunSelector[T Selectable](loader DataLoader[T], config SelectorConfig) (*T, error) {
 	model := NewSelector(loader, config)
 	p := tea.NewProgram(model)
-	
+
 	finalModel, err := p.Run()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if final, ok := finalModel.(*selectorModel[T]); ok {
 		if final.selected != nil {
 			return final.selected, nil
@@ -199,7 +201,7 @@ func RunSelector[T Selectable](loader DataLoader[T], config SelectorConfig) (*T,
 			return nil, final.err
 		}
 	}
-	
+
 	return nil, fmt.Errorf("no item selected")
 }
 
@@ -242,7 +244,8 @@ type ProjectSelectable struct {
 }
 
 func (p ProjectSelectable) GetID() string {
-	return string(p.ProjectAssignment.Project.ID)
+	s := strconv.FormatInt(p.ProjectAssignment.Project.ID, 10)
+	return s
 }
 
 func (p ProjectSelectable) GetTitle() string {
@@ -250,7 +253,7 @@ func (p ProjectSelectable) GetTitle() string {
 }
 
 func (p ProjectSelectable) GetDescription() string {
-	return fmt.Sprintf("ID: %s | Client: %s | Status: %s", p.Project.ID)
+	return fmt.Sprintf("ID: %s | Client: %s", strconv.FormatInt(p.ProjectAssignment.Project.ID, 10), p.ProjectAssignment.Client.Name)
 }
 
 // Entry loader implementation
@@ -264,19 +267,19 @@ func (el *EntryLoader) Load() ([]EntrySelectable, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	selectableEntries := make([]EntrySelectable, len(entries))
 	for i, entry := range entries {
 		selectableEntries[i] = EntrySelectable{Entry: entry}
 	}
-	
+
 	return selectableEntries, nil
 }
 
 // Task loader implementation
 type TaskLoader struct {
-	client *api.Client
-	params api.ListParams
+	client    *api.Client
+	params    api.ListParams
 	projectId int64
 }
 
@@ -305,12 +308,12 @@ func (pl *ProjectLoader) Load() ([]ProjectSelectable, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	selectableProjects := make([]ProjectSelectable, len(projects))
 	for i, project := range projects {
 		selectableProjects[i] = ProjectSelectable{ProjectAssignment: project}
 	}
-	
+
 	return selectableProjects, nil
 }
 
@@ -338,12 +341,12 @@ func SelectEntryInteractively(client *api.Client) (*api.Entry, error) {
 		EmptyMsg:   "No entries found.",
 		LoadingMsg: "Loading entries...",
 	}
-	
+
 	selected, err := RunSelector(loader, config)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return selected.Entry, nil
 }
 
@@ -370,11 +373,11 @@ func SelectProjectInteractively(client *api.Client) (*api.Project, error) {
 		EmptyMsg:   "No projects found.",
 		LoadingMsg: "Loading projects...",
 	}
-	
+
 	selected, err := RunSelector(loader, config)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &selected.Project, nil
 }

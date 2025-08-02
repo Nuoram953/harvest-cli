@@ -116,12 +116,6 @@ func (m DateInputModel) Update(msg tea.Msg) (DateInputModel, tea.Cmd) {
 func (m DateInputModel) View() string {
 	var b strings.Builder
 
-	// Title
-	if m.title != "" {
-		b.WriteString(titleStyle.Render(m.title))
-		b.WriteString("\n\n")
-	}
-
 	// If submitted successfully, show the result
 	if m.submitted && m.validDate != nil {
 		return b.String()

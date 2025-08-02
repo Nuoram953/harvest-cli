@@ -1,19 +1,19 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"harvest-cli/internal/api"
 	"harvest-cli/internal/ui"
+	"strconv"
+	"strings"
 )
 
 var entryCmd = &cobra.Command{
 	Use:   "entry",
-	Short: "Manage entries via API",
-	Long:  `Create, view, edit, and delete entries through the API`,
+	Short: "Manage time entries via API",
+	Long:  `create, view, edit, and delete entries through the API`,
 }
 
 var entryCreateCmd = &cobra.Command{
@@ -22,48 +22,22 @@ var entryCreateCmd = &cobra.Command{
 	RunE:  runEntryCreate,
 }
 
-var entryViewCmd = &cobra.Command{
-	Use:   "view [id]",
-	Short: "View a time entry",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runEntryView,
-}
-
-var entryEditCmd = &cobra.Command{
-	Use:   "edit [id]",
-	Short: "Edit a time entry",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runEntryEdit,
-}
-
-var entryDeleteCmd = &cobra.Command{
-	Use:   "delete [id]",
-	Short: "Delete a time entry",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runEntryDelete,
-}
-
 var (
 	entryProjectId int64
 	entryTaskId    int64
 	entryDate      string
-	entryMinutes   int
+	entryMinutes   float64
 )
 
 func init() {
 	entryCmd.AddCommand(entryCreateCmd)
-	entryCmd.AddCommand(entryViewCmd)
-	entryCmd.AddCommand(entryEditCmd)
-	entryCmd.AddCommand(entryDeleteCmd)
 
 	addGlobalFlags(entryCmd)
 
-	entryCreateCmd.Flags().Int64VarP(&entryProjectId, "project", "p", 0, "Entry title (required)")
-	entryCreateCmd.Flags().Int64VarP(&entryTaskId, "task", "t", 0, "Entry content")
-	entryCreateCmd.Flags().StringVarP(&entryDate, "date", "d", "", "Tags (comma-separated)")
-	entryCreateCmd.Flags().IntVarP(&entryMinutes, "minute", "m", 0, "Entry status")
-
-	addViewFlags(entryViewCmd)
+	entryCreateCmd.Flags().Int64VarP(&entryProjectId, "project", "p", 0, "Project ID")
+	entryCreateCmd.Flags().Int64VarP(&entryTaskId, "task", "t", 0, "Task ID")
+	entryCreateCmd.Flags().StringVarP(&entryDate, "date", "d", "", "Date for the entry (YYYY-MM-DD)")
+	entryCreateCmd.Flags().Float64VarP(&entryMinutes, "minute", "m", 0, "Duration in minutes")
 }
 
 func runEntryCreate(cmd *cobra.Command, args []string) error {
@@ -83,120 +57,59 @@ func runEntryCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	if entryDate == "" {
-		date, _ := ui.TextInputDate("Select date for entry")
+		date, _ := ui.TextInputDate("When was the entry made?")
 		entryDate = date
 	}
 
+	if entryMinutes == 0 {
+		input, err := ui.SimpleTextInput("What was the duration?", "(ex. 60m / 1h)")
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+		}
+
+		input = strings.TrimSpace(input)
+		if strings.HasSuffix(input, "m") {
+			minStr := strings.TrimSuffix(input, "m")
+			minutes, err := strconv.Atoi(minStr)
+			if err != nil {
+				fmt.Println("Invalid minutes format.")
+			}
+			entryMinutes = float64(minutes) / 60.0
+		} else if strings.HasSuffix(input, "h") {
+			hourStr := strings.TrimSuffix(input, "h")
+			entryMinutes, err = strconv.ParseFloat(hourStr, 64)
+			if err != nil {
+				fmt.Println("Invalid hours format.")
+			}
+		} else {
+			fmt.Println("Invalid duration format. Please use '60m' or '1h'.")
+		}
+	}
+	if !cmd.Flags().Changed("noconfirm") {
+		confirm, err := ui.Confirm("Create entry", "Are you sure you want to create this entry?")
+		if err != nil {
+			return fmt.Errorf("Failed to confirm entry creation: %w", err)
+		}
+
+		if !confirm {
+			fmt.Println("Entry creation cancelled.")
+			return nil
+		}
+	}
 
 	entry := api.CreateEntryRequest{
 		ProjectId: entryProjectId,
 		TaskId:    entryTaskId,
 		Date:      entryDate,
-		Hours:     1,
+		Hours:     entryMinutes,
 	}
 
 	_, err = client.CreateEntry(entry)
 	if err != nil {
-		return fmt.Errorf("failed to create entry: %w", err)
+		return fmt.Errorf("Failed to create entry: %w", err)
 	}
 
 	fmt.Printf("Entry created successfully!")
-	return nil
-}
 
-func runEntryView(cmd *cobra.Command, args []string) error {
-	client, err := createAPIClient()
-	if err != nil {
-		return err
-	}
-
-	if len(args) == 1 {
-		entry, err := client.GetEntry(args[0])
-		if err != nil {
-			return fmt.Errorf("failed to get entry: %w", err)
-		}
-		return displayEntry(entry)
-	}
-
-	entries, err := client.ListEntries(buildListParams())
-	if err != nil {
-		return fmt.Errorf("failed to list entries: %w", err)
-	}
-
-	return displayEntries(entries)
-}
-
-func runEntryEdit(cmd *cobra.Command, args []string) error {
-	client, err := createAPIClient()
-	if err != nil {
-		return err
-	}
-
-	updates := api.UpdateEntryRequest{}
-	if cmd.Flags().Changed("tags") {
-		updates.Tags = &entryDate
-	}
-
-	result, err := client.UpdateEntry(args[0], updates)
-	if err != nil {
-		return fmt.Errorf("failed to update entry: %w", err)
-	}
-
-	fmt.Println("Entry updated successfully!")
-	return displayEntry(result)
-}
-
-func runEntryDelete(cmd *cobra.Command, args []string) error {
-	if !confirmDelete("entry", args[0]) {
-		return nil
-	}
-
-	client, err := createAPIClient()
-	if err != nil {
-		return err
-	}
-
-	err = client.DeleteEntry(args[0])
-	if err != nil {
-		return fmt.Errorf("failed to delete entry: %w", err)
-	}
-
-	fmt.Printf("Entry %s deleted successfully!\n", args[0])
-	return nil
-}
-
-func displayEntry(entry *api.Entry) error {
-	if outputFormat == "json" {
-		data, _ := json.MarshalIndent(entry, "", "  ")
-		fmt.Println(string(data))
-		return nil
-	}
-
-	fmt.Printf("ID:      %s\n", entry.ID)
-	fmt.Printf("Title:   %s\n", entry.Title)
-	fmt.Printf("Content: %s\n", entry.Content)
-	fmt.Printf("Tags:    %s\n", strings.Join(entry.Tags, ", "))
-	fmt.Printf("Status:  %s\n", entry.Status)
-	fmt.Printf("Private: %t\n", entry.Private)
-	return nil
-}
-
-func displayEntries(entries []*api.Entry) error {
-	if outputFormat == "json" {
-		data, _ := json.MarshalIndent(entries, "", "  ")
-		fmt.Println(string(data))
-		return nil
-	}
-
-	fmt.Printf("%-10s %-30s %-15s %-10s\n", "ID", "Title", "Status", "Private")
-	fmt.Println(strings.Repeat("-", 70))
-	for _, entry := range entries {
-		title := entry.Title
-		if len(title) > 30 {
-			title = title[:27] + "..."
-		}
-		fmt.Printf("%-10s %-30s %-15s %-10t\n",
-			entry.ID, title, entry.Status, entry.Private)
-	}
 	return nil
 }

@@ -17,7 +17,7 @@ type CreateEntryRequest struct {
 	ProjectId int64  `json:"project_id"`
 	TaskId    int64  `json:"task_id,omitempty"`
 	Date      string `json:"spent_date,omitempty"`
-	Hours     int    `json:"hours,omitempty"`
+	Hours     float64    `json:"hours,omitempty"`
 }
 
 type UpdateEntryRequest struct {
