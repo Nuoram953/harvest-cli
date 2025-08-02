@@ -18,5 +18,10 @@
   },
   "scripts": {
     "prepare": "husky"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
   }
 }
