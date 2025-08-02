@@ -2,6 +2,7 @@
   "name": "harvest-cli",
   "description": "An unofficial CLI for the Harvest time tracking app",
   "version": "0.0.0-development",
+  "type": "module",
   "author": {
     "name": "Antoine Auger-Maroun",
     "email": "antoinemaroun@gmail.com"
