@@ -20,6 +20,9 @@
     "prepare": "husky"
   },
   "commitlint": {
+    "ignores": [
+      "commit => commit.includes('[skip ci]')"
+    ],
     "extends": [
       "@commitlint/config-conventional"
     ]
