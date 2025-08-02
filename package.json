@@ -1,4 +1,12 @@
 {
+  "name": "harvest-cli",
+  "description": "An unofficial CLI for the Harvest time tracking app",
+  "version": "0.0.0-development",
+  "author": {
+    "name": "Antoine Auger-Maroun",
+    "email": "antoinemaroun@gmail.com"
+  },
+  "private": true,
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
