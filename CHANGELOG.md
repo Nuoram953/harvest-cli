@@ -1,3 +1,10 @@
+# [1.1.0-beta.2](https://github.com/Nuoram953/harvest-cli/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2025-08-03)
+
+
+### Features
+
+* show user input after selection ([3c0fdd6](https://github.com/Nuoram953/harvest-cli/commit/3c0fdd63169bc4423deac15e4a7d7daac7ee2e25))
+
 # [1.1.0-beta.1](https://github.com/Nuoram953/harvest-cli/compare/v1.0.0...v1.1.0-beta.1) (2025-08-02)
 
 
