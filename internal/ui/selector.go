@@ -22,7 +22,6 @@ type DataLoader[T Selectable] interface {
 	Load() ([]T, error)
 }
 
-// Generic list item wrapper
 type selectableItem[T Selectable] struct {
 	item T
 }
@@ -31,7 +30,6 @@ func (i selectableItem[T]) FilterValue() string { return i.item.GetTitle() }
 func (i selectableItem[T]) Title() string       { return i.item.GetTitle() }
 func (i selectableItem[T]) Description() string { return i.item.GetDescription() }
 
-// Generic selector model
 type selectorModel[T Selectable] struct {
 	loading    bool
 	spinner    spinner.Model
@@ -49,7 +47,6 @@ type selectorModel[T Selectable] struct {
 type itemsLoadedMsg[T Selectable] []T
 type itemsErrorMsg error
 
-// SelectorConfig holds configuration for the selector
 type SelectorConfig struct {
 	Title      string
 	EmptyMsg   string
@@ -63,7 +60,6 @@ func NewSelector[T Selectable](loader DataLoader[T], config SelectorConfig) *sel
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
-	// Set defaults
 	if config.Title == "" {
 		config.Title = "Select an Item"
 	}
@@ -77,7 +73,7 @@ func NewSelector[T Selectable](loader DataLoader[T], config SelectorConfig) *sel
 		config.Width = 80
 	}
 	if config.Height == 0 {
-		config.Height = 28 
+		config.Height = 14
 	}
 
 	return &selectorModel[T]{
@@ -109,6 +105,14 @@ func (m *selectorModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			m.quitting = true
 			return m, tea.Quit
+		case "esc":
+			if m.list.FilterState() == list.Filtering {
+				m.list.ResetFilter()
+				return m, nil
+			} else {
+				m.quitting = true
+				return m, tea.Quit
+			}
 		case "enter":
 			if !m.loading && len(m.items) > 0 {
 				if selectedItem, ok := m.list.SelectedItem().(selectableItem[T]); ok {
@@ -123,13 +127,11 @@ func (m *selectorModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.items = []T(msg)
 
-		// Create list items
 		listItems := make([]list.Item, len(m.items))
 		for i, item := range m.items {
 			listItems[i] = selectableItem[T]{item: item}
 		}
 
-		// Setup list
 		l := list.New(listItems, list.NewDefaultDelegate(), 80, 14)
 		l.Title = m.title
 		l.SetShowStatusBar(false)
@@ -181,7 +183,7 @@ func (m *selectorModel[T]) View() string {
 		return m.emptyMsg + "\n"
 	}
 
-	return "\n" + m.list.View() + "\n\nPress Enter to select, q/esc to quit\n"
+	return "\n" + m.list.View()
 }
 
 func RunSelector[T Selectable](loader DataLoader[T], config SelectorConfig) (*T, error) {
@@ -205,7 +207,6 @@ func RunSelector[T Selectable](loader DataLoader[T], config SelectorConfig) (*T,
 	return nil, fmt.Errorf("no item selected")
 }
 
-// Entry implementation of Selectable interface
 type EntrySelectable struct {
 	*api.Entry
 }
@@ -222,13 +223,12 @@ func (e EntrySelectable) GetDescription() string {
 	return fmt.Sprintf("ID: %s | Status: %s | Private: %t", e.Entry.ID, e.Entry.Status, e.Entry.Private)
 }
 
-// Task implementation of Selectable interface
 type TaskSelectable struct {
 	*api.TaskAssignment
 }
 
 func (t TaskSelectable) GetID() string {
-	return string(t.TaskAssignment.Task.ID)
+	return strconv.FormatInt(t.TaskAssignment.Task.ID, 10)
 }
 
 func (t TaskSelectable) GetTitle() string {
@@ -236,7 +236,7 @@ func (t TaskSelectable) GetTitle() string {
 }
 
 func (t TaskSelectable) GetDescription() string {
-	return fmt.Sprintf("ID: %s | Project: %s", t.Task.ID)
+	return fmt.Sprintf("ID: %s", strconv.FormatInt(t.Task.ID, 10))
 }
 
 type ProjectSelectable struct {
@@ -256,7 +256,6 @@ func (p ProjectSelectable) GetDescription() string {
 	return fmt.Sprintf("ID: %s | Client: %s", strconv.FormatInt(p.ProjectAssignment.Project.ID, 10), p.ProjectAssignment.Client.Name)
 }
 
-// Entry loader implementation
 type EntryLoader struct {
 	client *api.Client
 	params api.ListParams
@@ -276,7 +275,6 @@ func (el *EntryLoader) Load() ([]EntrySelectable, error) {
 	return selectableEntries, nil
 }
 
-// Task loader implementation
 type TaskLoader struct {
 	client    *api.Client
 	params    api.ListParams
@@ -297,7 +295,6 @@ func (tl *TaskLoader) Load() ([]TaskSelectable, error) {
 	return selectableTasks, nil
 }
 
-// Project loader implementation
 type ProjectLoader struct {
 	client *api.Client
 	params api.ListParams
@@ -317,20 +314,10 @@ func (pl *ProjectLoader) Load() ([]ProjectSelectable, error) {
 	return selectableProjects, nil
 }
 
-// Helper function to build list parameters
 func buildListParams() api.ListParams {
-	// Return the appropriate api.ListParams struct
-	// You'll need to adjust this based on your actual api.ListParams structure
-	return api.ListParams{
-		// Add fields based on your api.ListParams struct
-		// Examples (adjust field names to match your API):
-		// Limit:  100,
-		// Status: "",
-		// Page:   1,
-	}
+	return api.ListParams{}
 }
 
-// SelectEntryInteractively allows interactive selection of an entry
 func SelectEntryInteractively(client *api.Client) (*api.Entry, error) {
 	loader := &EntryLoader{
 		client: client,

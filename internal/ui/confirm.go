@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Styles for the confirm component
 var (
 	confirmTitleStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#FAFAFA")).
@@ -29,7 +28,6 @@ var (
 			Foreground(lipgloss.Color("241"))
 )
 
-// ConfirmModel represents the confirm component
 type ConfirmModel struct {
 	title     string
 	message   string
@@ -38,7 +36,6 @@ type ConfirmModel struct {
 	cancelled bool
 }
 
-// NewConfirm creates a new confirm component
 func NewConfirm(title, message string) ConfirmModel {
 	return ConfirmModel{
 		title:   title,
@@ -46,12 +43,10 @@ func NewConfirm(title, message string) ConfirmModel {
 	}
 }
 
-// Init initializes the confirm component
 func (m ConfirmModel) Init() tea.Cmd {
 	return nil
 }
 
-// Update handles the confirm component updates
 func (m ConfirmModel) Update(msg tea.Msg) (ConfirmModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -72,11 +67,9 @@ func (m ConfirmModel) Update(msg tea.Msg) (ConfirmModel, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the confirm component
 func (m ConfirmModel) View() string {
 	var b strings.Builder
 
-	// If answered, show the result
 	if m.answered {
 		if m.confirmed {
 			b.WriteString(confirmYesStyle.Render("✓ Confirmed"))
@@ -86,47 +79,38 @@ func (m ConfirmModel) View() string {
 		return b.String()
 	}
 
-	// Message
 	if m.message != "" {
+		b.WriteString("\n\n")
 		b.WriteString(confirmMessageStyle.Render(m.message))
 		b.WriteString("\n\n")
 	}
 
-	// Options
 	b.WriteString(confirmYesStyle.Render("[Y]es"))
 	b.WriteString(" / ")
 	b.WriteString(confirmNoStyle.Render("[N]o"))
 	b.WriteString("\n\n")
 
-	// Help text
-	b.WriteString(confirmHelpStyle.Render("Press Y for Yes, N for No, or Esc to cancel"))
-
 	return b.String()
 }
 
-// IsAnswered returns true if the user has answered (y/n)
 func (m ConfirmModel) IsAnswered() bool {
 	return m.answered
 }
 
-// IsConfirmed returns true if the user confirmed (pressed y/yes)
 func (m ConfirmModel) IsConfirmed() bool {
 	return m.answered && m.confirmed
 }
 
-// IsCancelled returns true if the user cancelled (pressed esc)
 func (m ConfirmModel) IsCancelled() bool {
 	return m.cancelled
 }
 
-// Reset resets the confirm component to its initial state
 func (m *ConfirmModel) Reset() {
 	m.confirmed = false
 	m.answered = false
 	m.cancelled = false
 }
 
-// Confirm is a convenience function to get a confirmation from the user
 func Confirm(title, message string) (bool, error) {
 	model := NewConfirm(title, message)
 	
@@ -138,7 +122,6 @@ func Confirm(title, message string) (bool, error) {
 
 	if wrapper, ok := finalModel.(confirmWrapper); ok {
 		if wrapper.model.IsCancelled() {
-			return false, nil // User cancelled
 		}
 		return wrapper.model.IsConfirmed(), nil
 	}
@@ -146,7 +129,6 @@ func Confirm(title, message string) (bool, error) {
 	return false, nil
 }
 
-// confirmWrapper wraps the ConfirmModel to handle quit behavior
 type confirmWrapper struct {
 	model ConfirmModel
 }
