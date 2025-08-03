@@ -28,25 +28,23 @@ All commands follow the pattern:
 harvest [entity] [action] [options]
 ```
 
-## Entry Commands
+### Entry Commands
 
 ```bash
 harvest entry create
 ```
 
-Create a new time entry.
+Create a new time entry. If no options given, it will prompt for input.
 
-### Options
+#### Options
 
 - `-p, --project <project>`: Specify the project ID.
 - `-t, --task <task>`: Specify the task ID.
 - `-d, --date <date>`: Specify the date (default: today).
-- `-h, --hours <hours>`: Specify the number of hours.
+- `--time <time>`: Specify the number of hours or minutes (eg. 2.5h/120m/1h30m).
+
+#### Global Options
+
+- `--noconfirm`: Skip confirmation prompts.
 
 ---
-
-## Global Options
-
-```bash
-- `-n, --noconfirm`: Skip confirmation prompts.
-```
