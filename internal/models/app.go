@@ -16,7 +16,6 @@ type App struct {
 	state  state
 	width  int
 	height int
-	// Add your app-specific fields
 }
 
 func NewApp() *App {
